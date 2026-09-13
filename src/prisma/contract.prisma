@@ -1,0 +1,207 @@
+enum UserRole {
+USER
+ADMIN
+}
+
+enum ProjectStatus {
+ACTIVE
+ARCHIVED
+}
+
+enum AgentType {
+CODER
+DEBUGGER
+PLANNER
+REVIEWER
+DEPLOYER
+}
+
+enum AgentRunStatus {
+QUEUED
+RUNNING
+COMPLETED
+FAILED
+CANCELLED
+}
+
+enum MessageRole {
+USER
+ASSISTANT
+SYSTEM
+}
+
+enum ChangeType {
+CREATE
+UPDATE
+DELETE
+RENAME
+}
+
+enum DeploymentStatus {
+QUEUED
+BUILDING
+SUCCESS
+FAILED
+CANCELLED
+}
+
+enum Environment {
+DEVELOPMENT
+PREVIEW
+PRODUCTION
+}
+
+model User {
+id            Int          @id @default(autoincrement())
+email         String       @unique
+username      String?      @unique
+name          String?
+avatarUrl     String?
+passwordHash  String
+role          UserRole     @default(USER)
+
+projects      Project[]
+conversations Conversation[]
+activities    Activity[]
+
+createdAt     TimestamptzString @default(now())
+updatedAt     temporal.updatedAtString()
+}
+
+model Project {
+id            Int           @id @default(autoincrement())
+userId        Int
+name          String
+description   String?
+status        ProjectStatus @default(ACTIVE)
+repositoryUrl String?
+
+owner         User          @relation(fields: [userId], references: [id])
+files         ProjectFile[]
+conversations Conversation[]
+agentRuns     AgentRun[]
+changes       CodeChange[]
+deployments   Deployment[]
+memories      ProjectMemory[]
+activities    Activity[]
+
+createdAt     TimestamptzString @default(now())
+updatedAt     temporal.updatedAtString()
+}
+
+model ProjectFile {
+id        Int      @id @default(autoincrement())
+projectId Int
+path      String
+language  String?
+content   String?
+size      Int      @default(0)
+
+project   Project  @relation(fields: [projectId], references: [id])
+
+createdAt TimestamptzString @default(now())
+updatedAt temporal.updatedAtString()
+
+@@unique([projectId, path])
+}
+
+model Conversation {
+id        Int       @id @default(autoincrement())
+projectId Int
+userId    Int
+title     String?
+
+project   Project   @relation(fields: [projectId], references: [id])
+user      User      @relation(fields: [userId], references: [id])
+messages  Message[]
+agentRuns AgentRun[]
+
+createdAt TimestamptzString @default(now())
+updatedAt temporal.updatedAtString()
+}
+
+model Message {
+id             Int          @id @default(autoincrement())
+conversationId Int
+role           MessageRole
+content        String
+
+conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+createdAt      TimestamptzString @default(now())
+}
+
+model AgentRun {
+id             Int            @id @default(autoincrement())
+projectId      Int
+conversationId Int?
+agentType      AgentType
+status         AgentRunStatus @default(QUEUED)
+prompt         String
+result         String?
+
+project        Project        @relation(fields: [projectId], references: [id])
+conversation   Conversation?  @relation(fields: [conversationId], references: [id])
+changes        CodeChange[]
+
+startedAt      TimestamptzString?
+completedAt    TimestamptzString?
+createdAt      TimestamptzString @default(now())
+}
+
+model CodeChange {
+id         Int        @id @default(autoincrement())
+projectId  Int
+agentRunId Int?
+filePath   String
+changeType ChangeType
+summary    String
+diff       String?
+
+project    Project    @relation(fields: [projectId], references: [id])
+agentRun   AgentRun?  @relation(fields: [agentRunId], references: [id])
+
+createdAt  TimestamptzString @default(now())
+}
+
+model Deployment {
+id          Int              @id @default(autoincrement())
+projectId   Int
+provider    String
+environment Environment
+url         String?
+status      DeploymentStatus @default(QUEUED)
+
+project     Project          @relation(fields: [projectId], references: [id])
+
+deployedAt  TimestamptzString?
+createdAt   TimestamptzString @default(now())
+}
+
+model ProjectMemory {
+id        Int      @id @default(autoincrement())
+projectId Int
+key       String
+value     String
+
+project   Project  @relation(fields: [projectId], references: [id])
+
+createdAt TimestamptzString @default(now())
+updatedAt temporal.updatedAtString()
+
+@@unique([projectId, key])
+}
+
+model Activity {
+id        Int      @id @default(autoincrement())
+userId    Int
+projectId Int?
+action    String
+metadata  String?
+
+user      User     @relation(fields: [userId], references: [id])
+project   Project? @relation(fields: [projectId], references: [id])
+
+createdAt TimestamptzString @default(now())
+}
+
