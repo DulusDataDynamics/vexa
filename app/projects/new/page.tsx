@@ -31,57 +31,40 @@ export default function NewProject() {
 
   const [prompt, setPrompt] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const [error, setError] = useState("");
 
-  async function startProject() {
+  function startProject() {
     const cleanPrompt = prompt.trim();
 
     if (!cleanPrompt || isCreating) return;
 
     setIsCreating(true);
-    setError("");
+    const projectName = createProjectName(cleanPrompt);
+    const projectId = `${projectName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "new-project"}-${Date.now()}`;
+    const project = {
+      id: projectId,
+      name: projectName,
+      description: cleanPrompt,
+      createdAt: new Date().toISOString(),
+      status: "ACTIVE",
+    };
 
-    try {
-      const projectName = createProjectName(cleanPrompt);
+    localStorage.setItem("vexa_new_project", JSON.stringify(project));
+    localStorage.setItem(
+      "vexa_build_request",
+      JSON.stringify({
+        prompt: cleanPrompt,
+        projectId,
+        createdAt: project.createdAt,
+      }),
+    );
 
-      const response = await fetch("/api/projects", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: projectName,
-          description: cleanPrompt,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create project");
-      }
-
-      localStorage.setItem(
-        "vexa_build_request",
-        JSON.stringify({
-          prompt: cleanPrompt,
-          projectId: data.project.id,
-          createdAt: new Date().toISOString(),
-        })
-      );
-
-      router.push(`/projects/${data.project.id}`);
-    } catch (error) {
-      setError(
-        error instanceof Error
-          ? error.message
-          : "Something went wrong"
-      );
-      setIsCreating(false);
-    }
+    router.push(`/projects/${projectId}`);
   }
 
-  function useSuggestion(suggestion: string) {
+  function selectSuggestion(suggestion: string) {
     setPrompt(suggestion);
   }
 
@@ -132,12 +115,6 @@ export default function NewProject() {
                 className="w-full resize-none bg-transparent px-4 py-4 text-base leading-7 text-white outline-none placeholder:text-white/20"
               />
 
-              {error && (
-                <div className="mx-3 mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
-                  {error}
-                </div>
-              )}
-
               <div className="flex flex-col gap-3 border-t border-white/[0.07] px-3 pt-3 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-white/25">
                   Press Enter to start · Shift + Enter for a new line
@@ -162,7 +139,7 @@ export default function NewProject() {
                 {suggestions.map((suggestion) => (
                   <button
                     key={suggestion}
-                    onClick={() => useSuggestion(suggestion)}
+                      onClick={() => selectSuggestion(suggestion)}
                     className="rounded-full border border-white/[0.07] bg-white/[0.025] px-4 py-2 text-xs text-white/40 transition hover:border-white/[0.14] hover:bg-white/[0.05] hover:text-white/70"
                   >
                     {suggestion}

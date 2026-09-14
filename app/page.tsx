@@ -12,70 +12,11 @@ export default async function HomePage() {
   const projects = user ? await listProjectsForUser(user.id).catch(() => []) : [];
   const activeCount = projects.filter((project) => project.status === "ACTIVE").length;
 
-  if (!user) {
-    return (
-      <main className="min-h-screen bg-[#07080b] text-white">
-        <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-sm font-bold text-black">
-              V
-            </span>
-            <span className="text-lg font-semibold">VEXA</span>
-          </div>
-          <div className="flex gap-3 text-sm">
-            <Link href="/login" className="px-3 py-2 text-white/60 hover:text-white">
-              Sign in
-            </Link>
-            <Link
-              href="/signup"
-              className="rounded-lg bg-white px-4 py-2 font-medium text-black"
-            >
-              Create account
-            </Link>
-          </div>
-        </header>
-
-        <section className="mx-auto max-w-3xl px-6 py-24 text-center">
-          <p className="mb-4 text-xs font-medium uppercase tracking-[0.2em] text-white/35">
-            AI engineering platform
-          </p>
-          <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">
-            A workspace for building software with VEXA.
-          </h1>
-          <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-white/45">
-            Create projects, record engineering requests, inspect files, and keep
-            agent runs in a contract the coding engine can attach to later.
-          </p>
-          <div className="mt-8 flex justify-center gap-3">
-            <Link
-              href="/signup"
-              className="rounded-lg bg-white px-5 py-2.5 text-sm font-medium text-black"
-            >
-              Get started
-            </Link>
-            <Link
-              href="/login"
-              className="rounded-lg border border-white/10 px-5 py-2.5 text-sm text-white/70"
-            >
-              Sign in
-            </Link>
-          </div>
-          {!databaseReady ? (
-            <p className="mt-10 text-xs text-amber-300/80">
-              Configure DATABASE_URL and AUTH_SECRET in .env before creating
-              accounts.
-            </p>
-          ) : null}
-        </section>
-      </main>
-    );
-  }
-
   return (
     <AppShell user={user} title="Overview">
       <section className="mb-8">
         <h1 className="text-3xl font-semibold tracking-tight">
-          Welcome back{user.name ? `, ${user.name}` : ""}.
+          Welcome to VEXA{user?.name ? `, ${user.name}` : ""}.
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-white/40">
           Open a project workspace or describe something new. VEXA records

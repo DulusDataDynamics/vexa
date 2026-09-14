@@ -103,12 +103,19 @@ export default function BuildPage() {
 
         <section className="flex min-w-0 flex-1 flex-col">
           <header className="flex h-16 items-center justify-between border-b border-white/[0.07] bg-[#0b0d12]/80 px-5 backdrop-blur">
-            <div>
-              <p className="text-sm font-medium">New Build</p>
-
-              <p className="text-xs text-white/30">
-                Turn an idea into a working project
-              </p>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => router.push("/")}
+                className="flex items-center gap-2 text-xs font-medium text-white/50 hover:text-white transition bg-white/5 px-3 py-1.5 rounded-md"
+              >
+                ← Exit
+              </button>
+              <div>
+                <p className="text-sm font-medium">New Build</p>
+                <p className="text-xs text-white/30">
+                  Turn an idea into a working project
+                </p>
+              </div>
             </div>
 
             <button className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs text-white/50">

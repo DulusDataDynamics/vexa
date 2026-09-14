@@ -61,14 +61,7 @@ export function AppShell({ user, children, title }: AppShellProps) {
                   <p className="truncate text-xs text-white/30">{user.email}</p>
                 </div>
               </div>
-            ) : (
-              <Link
-                href="/login"
-                className="block rounded-lg px-3 py-2 text-sm text-white/60 hover:text-white"
-              >
-                Sign in
-              </Link>
-            )}
+            ) : null}
           </div>
         </aside>
 
@@ -77,14 +70,7 @@ export function AppShell({ user, children, title }: AppShellProps) {
             <p className="text-sm text-white/45">{title ?? "Workspace"}</p>
             {user ? (
               <SignOutButton />
-            ) : (
-              <Link
-                href="/login"
-                className="rounded-lg border border-white/[0.08] px-3 py-2 text-sm text-white/70"
-              >
-                Sign in
-              </Link>
-            )}
+            ) : null}
           </header>
           <div className="px-5 py-8 md:px-8">{children}</div>
         </main>

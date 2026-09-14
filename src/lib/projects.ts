@@ -186,11 +186,11 @@ export async function loadWorkspace(
       id: conversation.id,
       title: conversation.title,
       createdAt: conversation.createdAt,
-      messages: conversation.messages.map((message) => ({
-        id: message.id,
-        role: message.role,
-        content: message.content,
-        createdAt: message.createdAt,
+      messages: conversation.messages.map((message: any) => ({
+        id: message.id as number,
+        role: message.role as "USER" | "ASSISTANT" | "SYSTEM",
+        content: message.content as string,
+        createdAt: message.createdAt as string,
       })),
     })),
     agentRuns: agentRuns.map((run) => ({
