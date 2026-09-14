@@ -1,96 +1,55 @@
-import { cookies } from "next/headers";
-import { SignJWT, jwtVerify } from "jose";
-import crypto from "node:crypto";
+import { db } from "@/src/prisma/db";
+import { getSessionUserId } from "@/src/lib/session";
 
-const SESSION_COOKIE = "vexa_session";
+export type PublicUser = {
+  id: number;
+  email: string;
+  name: string | null;
+  username: string | null;
+  role: "USER" | "ADMIN";
+};
 
-function getSecret() {
-  const secret = process.env.AUTH_SECRET;
+export function toPublicUser(user: {
+  id: number;
+  email: string;
+  name: string | null;
+  username: string | null;
+  role: "USER" | "ADMIN";
+}): PublicUser {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    username: user.username,
+    role: user.role,
+  };
+}
 
-  if (!secret) {
-    throw new Error("AUTH_SECRET is not configured");
+export async function getCurrentUser(): Promise<PublicUser | null> {
+  const userId = await getSessionUserId();
+
+  if (!userId) {
+    return null;
   }
 
-  return new TextEncoder().encode(secret);
-}
-
-export function hashPassword(password: string) {
-  const salt = crypto.randomBytes(16).toString("hex");
-
-  const hash = crypto
-    .scryptSync(password, salt, 64)
-    .toString("hex");
-
-  return `${salt}:${hash}`;
-}
-
-export function verifyPassword(
-  password: string,
-  storedPassword: string
-) {
-  const [salt, storedHash] = storedPassword.split(":");
-
-  if (!salt || !storedHash) {
-    return false;
-  }
-
-  const hash = crypto
-    .scryptSync(password, salt, 64)
-    .toString("hex");
-
-  return crypto.timingSafeEqual(
-    Buffer.from(hash, "hex"),
-    Buffer.from(storedHash, "hex")
-  );
-}
-
-export async function createSession(userId: number) {
-  const token = await new SignJWT({ userId })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("7d")
-    .sign(getSecret());
-
-  const cookieStore = await cookies();
-
-  cookieStore.set(SESSION_COOKIE, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-}
-
-export async function getSessionUserId() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(SESSION_COOKIE)?.value;
-
-  if (!token) {
+  if (!process.env.DATABASE_URL) {
     return null;
   }
 
   try {
-    const { payload } = await jwtVerify(token, getSecret());
+    const user = await db.orm.public.User.where({ id: userId }).first();
 
-    if (typeof payload.userId !== "number") {
+    if (!user) {
       return null;
     }
 
-    return payload.userId;
-  } catch {
+    return toPublicUser(user);
+  } catch (error) {
+    console.error("Failed to load current user:", error);
     return null;
   }
 }
 
-export async function destroySession() {
-  const cookieStore = await cookies();
-
-  cookieStore.set(SESSION_COOKIE, "", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    path: "/",
-    maxAge: 0,
-  });
+export function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }

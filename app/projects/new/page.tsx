@@ -3,92 +3,173 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+const suggestions = [
+  "Build a modern landing page",
+  "Build a SaaS dashboard",
+  "Build a customer portal",
+  "Build an e-commerce website",
+  "Fix a bug in my application",
+];
+
+function createProjectName(prompt: string) {
+  const clean = prompt
+    .replace(/^(build|create|make|develop)\s+/i, "")
+    .trim();
+
+  if (!clean) return "New VEXA Project";
+
+  const name = clean
+    .split(/[.!?]/)[0]
+    .trim()
+    .slice(0, 45);
+
+  return name || "New VEXA Project";
+}
+
 export default function NewProject() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
 
-  function createProject() {
-    if (!name.trim()) return;
+  const [prompt, setPrompt] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [error, setError] = useState("");
 
-    const project = {
-      name: name.trim(),
-      description: description.trim(),
-      createdAt: new Date().toISOString(),
-    };
+  async function startProject() {
+    const cleanPrompt = prompt.trim();
 
-    localStorage.setItem("vexa_new_project", JSON.stringify(project));
-    router.push("/projects");
+    if (!cleanPrompt || isCreating) return;
+
+    setIsCreating(true);
+    setError("");
+
+    try {
+      const projectName = createProjectName(cleanPrompt);
+
+      const response = await fetch("/api/projects", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: projectName,
+          description: cleanPrompt,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create project");
+      }
+
+      localStorage.setItem(
+        "vexa_build_request",
+        JSON.stringify({
+          prompt: cleanPrompt,
+          projectId: data.project.id,
+          createdAt: new Date().toISOString(),
+        })
+      );
+
+      router.push(`/projects/${data.project.id}`);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Something went wrong"
+      );
+      setIsCreating(false);
+    }
+  }
+
+  function useSuggestion(suggestion: string) {
+    setPrompt(suggestion);
   }
 
   return (
     <main className="min-h-screen bg-[#08090d] text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-5 py-8 sm:px-8">
+      <div className="mx-auto flex min-h-screen w-full max-w-4xl flex-col px-5 py-8 sm:px-8">
         <button
-          onClick={() => router.back()}
-          className="mb-12 w-fit text-sm text-white/40 transition hover:text-white"
+          onClick={() => router.push("/projects")}
+          className="w-fit text-sm text-white/40 transition hover:text-white"
         >
-          ← Back
+          ← Projects
         </button>
 
-        <div className="mb-10">
-          <p className="mb-2 text-xs font-medium uppercase tracking-[0.16em] text-white/30">
-            New workspace
-          </p>
+        <div className="flex flex-1 flex-col justify-center pb-20 pt-16">
+          <div className="mx-auto w-full max-w-3xl">
+            <div className="mb-10 text-center">
+              <div className="mb-4 inline-flex items-center rounded-full border border-purple-500/20 bg-purple-500/[0.08] px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-purple-300">
+                VEXA
+              </div>
 
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            Start a new project.
-          </h1>
+              <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+                What do you want to build?
+              </h1>
 
-          <p className="mt-3 max-w-xl text-sm leading-6 text-white/40">
-            Give VEXA an idea. You can refine it with AI once the workspace is
-            created.
-          </p>
-        </div>
+              <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-white/40 sm:text-base">
+                Describe an application, feature, or problem.
+                VEXA will use your request as the starting point for the
+                engineering workspace.
+              </p>
+            </div>
 
-        <div className="space-y-6 rounded-2xl border border-white/[0.08] bg-[#0d1016] p-6 sm:p-8">
-          <div>
-            <label className="mb-2 block text-xs font-medium text-white/60">
-              Project name
-            </label>
+            <div className="rounded-2xl border border-white/[0.08] bg-[#0d1016] p-3 shadow-2xl shadow-black/20">
+              <textarea
+                value={prompt}
+                onChange={(event) => setPrompt(event.target.value)}
+                onKeyDown={(event) => {
+                  if (
+                    event.key === "Enter" &&
+                    !event.shiftKey
+                  ) {
+                    event.preventDefault();
+                    startProject();
+                  }
+                }}
+                autoFocus
+                rows={7}
+                placeholder="Describe what you want VEXA to build..."
+                className="w-full resize-none bg-transparent px-4 py-4 text-base leading-7 text-white outline-none placeholder:text-white/20"
+              />
 
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Customer Portal"
-              className="h-12 w-full rounded-lg border border-white/[0.08] bg-[#08090d] px-4 text-sm text-white outline-none transition placeholder:text-white/20 focus:border-white/20"
-            />
-          </div>
+              {error && (
+                <div className="mx-3 mb-3 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+                  {error}
+                </div>
+              )}
 
-          <div>
-            <label className="mb-2 block text-xs font-medium text-white/60">
-              What are you building?
-            </label>
+              <div className="flex flex-col gap-3 border-t border-white/[0.07] px-3 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-white/25">
+                  Press Enter to start · Shift + Enter for a new line
+                </p>
 
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe the application, feature or problem you want VEXA to work on..."
-              rows={6}
-              className="w-full resize-none rounded-lg border border-white/[0.08] bg-[#08090d] px-4 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-white/20 focus:border-white/20"
-            />
-          </div>
+                <button
+                  onClick={startProject}
+                  disabled={!prompt.trim() || isCreating}
+                  className="rounded-lg bg-white px-5 py-2.5 text-sm font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  {isCreating ? "Starting VEXA..." : "Start with VEXA →"}
+                </button>
+              </div>
+            </div>
 
-          <div className="flex flex-col gap-3 border-t border-white/[0.07] pt-6 sm:flex-row sm:justify-end">
-            <button
-              onClick={() => router.back()}
-              className="rounded-lg border border-white/10 bg-white/[0.03] px-5 py-3 text-sm text-white/60 transition hover:bg-white/[0.07] hover:text-white"
-            >
-              Cancel
-            </button>
+            <div className="mt-8">
+              <p className="mb-3 text-center text-[10px] font-medium uppercase tracking-[0.18em] text-white/20">
+                Try one of these
+              </p>
 
-            <button
-              onClick={createProject}
-              disabled={!name.trim()}
-              className="rounded-lg bg-white px-5 py-3 text-sm font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-30"
-            >
-              Create project
-            </button>
+              <div className="flex flex-wrap justify-center gap-2">
+                {suggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    onClick={() => useSuggestion(suggestion)}
+                    className="rounded-full border border-white/[0.07] bg-white/[0.025] px-4 py-2 text-xs text-white/40 transition hover:border-white/[0.14] hover:bg-white/[0.05] hover:text-white/70"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

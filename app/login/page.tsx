@@ -4,12 +4,12 @@ import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function SignupPage() {
+export default async function LoginPage() {
   const user = await getCurrentUser();
 
   if (user) {
     redirect("/projects");
   }
 
-  return <AuthForm mode="signup" />;
+  return <AuthForm mode="login" />;
 }

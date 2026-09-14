@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { hashPassword } from "@/src/lib/password";
 import { isValidEmail, toPublicUser } from "@/src/lib/auth";
 import { asString, jsonError, readJsonBody } from "@/src/lib/http";
+import { verifyPassword } from "@/src/lib/password";
 import { createSession, isAuthConfigured } from "@/src/lib/session";
 import { db, isDatabaseConfigured } from "@/src/prisma/db";
 
@@ -23,8 +23,6 @@ export async function POST(request: Request) {
       return jsonError("Request body must be JSON.", 400);
     }
 
-    const name = asString(body.name).trim();
-    const username = asString(body.username).trim() || null;
     const email = asString(body.email).trim().toLowerCase();
     const password = asString(body.password);
 
@@ -36,44 +34,17 @@ export async function POST(request: Request) {
       return jsonError("Enter a valid email address.", 400);
     }
 
-    if (password.length < 8) {
-      return jsonError("Password must be at least 8 characters.", 400);
+    const user = await db.orm.public.User.where({ email }).first();
+
+    if (!user || !(await verifyPassword(password, user.passwordHash))) {
+      return jsonError("Invalid email or password.", 401);
     }
-
-    const existingEmail = await db.orm.public.User.where({ email }).first();
-
-    if (existingEmail) {
-      return jsonError("An account with that email already exists.", 409);
-    }
-
-    if (username) {
-      const existingUsername = await db.orm.public.User.where({
-        username,
-      }).first();
-
-      if (existingUsername) {
-        return jsonError("That username is already taken.", 409);
-      }
-    }
-
-    const user = await db.orm.public.User.create({
-      email,
-      name: name || null,
-      username,
-      passwordHash: await hashPassword(password),
-      role: "USER",
-    });
 
     await createSession(user.id);
 
-    return NextResponse.json(
-      {
-        user: toPublicUser(user),
-      },
-      { status: 201 },
-    );
+    return NextResponse.json({ user: toPublicUser(user) });
   } catch (error) {
-    console.error("Signup error:", error);
-    return jsonError("Unable to create the account.", 500);
+    console.error("Login error:", error);
+    return jsonError("Unable to sign in.", 500);
   }
 }
